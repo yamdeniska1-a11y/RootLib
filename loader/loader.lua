@@ -1,177 +1,221 @@
-if not game:IsLoaded() then
-    game.Loaded:Wait()
-end
-
 local CoreGui = game:GetService("CoreGui")
-local HttpService = game:GetService("HttpService")
+local RunService = game:GetService("RunService")
 
-local rootLibFolder = CoreGui:FindFirstChild("RootLib")
-if not rootLibFolder then
-    rootLibFolder = Instance.new("Folder")
-    rootLibFolder.Name = "RootLib"
-    rootLibFolder.Parent = CoreGui
+local mainFolder = CoreGui:FindFirstChild("RootLib")
+if not mainFolder then
+    mainFolder = Instance.new("Folder")
+    mainFolder.Name = "RootLib"
+    mainFolder.Parent = CoreGui
 end
 
-local loaderFolder = rootLibFolder:FindFirstChild("loader")
+local loaderFolder = mainFolder:FindFirstChild("loader")
 if not loaderFolder then
     loaderFolder = Instance.new("Folder")
     loaderFolder.Name = "loader"
-    loaderFolder.Parent = rootLibFolder
+    loaderFolder.Parent = mainFolder
 end
 
-local CORE_URL = "https://raw.githubusercontent.com/yamdeniska1-a11y/RootLib/refs/heads/main/core/core.lua"
+if loaderFolder:FindFirstChild("GameLoaderMenu") then
+    loaderFolder.GameLoaderMenu:Destroy()
+end
 
-local SupportedGames = {
-       [122789100578830] = {
-        Name = "Infected Lands",
-        Version = "Any"
-    },
-}
+local customGui = Instance.new("ScreenGui")
+customGui.Name = "GameLoaderMenu"
+customGui.IgnoreGuiInset = true
+customGui.Parent = loaderFolder
 
-local currentPlaceId = game.PlaceId
-local currentVersion = game.PlaceVersion
+-- Основной фрейм 300x500 по центру
+local mainFrame = Instance.new("Frame")
+mainFrame.Name = "MainFrame"
+mainFrame.Size = UDim2.new(0, 300, 0, 500)
+mainFrame.Position = UDim2.new(0.5, -150, 0.5, -250)
+mainFrame.BackgroundColor3 = Color3.fromRGB(0, 0, 0)
+mainFrame.BorderSizePixel = 0
+mainFrame.ClipsDescendants = true
+mainFrame.Parent = customGui
 
-local function ExecuteCore(coreScriptCode)
-    local func, err = loadstring(coreScriptCode)
-    if func then
-        func()
+local corner = Instance.new("UICorner")
+corner.CornerRadius = UDim.new(0, 10)
+corner.Parent = mainFrame
+
+local stroke = Instance.new("UIStroke")
+stroke.Color = Color3.fromRGB(30, 30, 30)
+stroke.Thickness = 0.6
+stroke.Parent = mainFrame
+
+-- Контейнер для шапки
+local imageContainer = Instance.new("Frame")
+imageContainer.Name = "ImageContainer"
+imageContainer.Size = UDim2.new(1, 0, 0, 180)
+imageContainer.Position = UDim2.new(0, 0, 0, 0)
+imageContainer.BackgroundTransparency = 1
+imageContainer.ClipsDescendants = true
+imageContainer.Parent = mainFrame
+
+local containerCorner = Instance.new("UICorner")
+containerCorner.CornerRadius = UDim.new(0, 10)
+containerCorner.Parent = imageContainer
+
+local iconImage = Instance.new("ImageLabel")
+iconImage.Name = "GameIcon"
+iconImage.Size = UDim2.new(1, 0, 1, 0)
+iconImage.Position = UDim2.new(0, 0, 0, 0)
+iconImage.BackgroundTransparency = 1
+iconImage.ScaleType = Enum.ScaleType.Crop
+iconImage.Parent = imageContainer
+
+local imgCorner = Instance.new("UICorner")
+imgCorner.CornerRadius = UDim.new(0, 10)
+imgCorner.Parent = iconImage
+
+-- Черный плавный градиент на стыке
+local shadowFade = Instance.new("Frame")
+shadowFade.Name = "JointShadow"
+shadowFade.Size = UDim2.new(1, 0, 0, 45)
+shadowFade.Position = UDim2.new(0, 0, 1, -45)
+shadowFade.BackgroundColor3 = Color3.fromRGB(0, 0, 0)
+shadowFade.BorderSizePixel = 0
+shadowFade.Parent = imageContainer
+
+local gradient = Instance.new("UIGradient")
+gradient.Transparency = NumberSequence.new({
+    NumberSequenceKeypoint.new(0, 1),
+    NumberSequenceKeypoint.new(0.4, 0.3), 
+    NumberSequenceKeypoint.new(1, 0)
+})
+gradient.Rotation = 90
+gradient.Parent = shadowFade
+
+-- Загрузка картинки с GitHub
+task.spawn(function()
+    local success, res = pcall(function()
+        local imgUrl = "https://raw.githubusercontent.com/yamdeniska1-a11y/RootLib/refs/heads/main/icon/game/infectedlands.png"
+        if writefile and getcustomasset then
+            local fileName = "rootlib_temp_icon.png"
+            writefile(fileName, game:HttpGet(imgUrl))
+            return getcustomasset(fileName)
+        end
+        return nil
+    end)
+    if success and res then
+        iconImage.Image = res
     else
-        warn("RootLib Core Execution Error: " .. tostring(err))
+        iconImage.Image = "rbxassetid://0" 
     end
-end
+end)
 
-local function FetchCore()
-    local success, result = pcall(function()
-        return game:HttpGet(CORE_URL)
-    end)
-    if success and result and result ~= "" and not result:match("404: Not Found") then
-        return result
+-- КОНТЕЙНЕР ДЛЯ ЛЕТЯЩИХ ТОЧЕК
+local particlesContainer = Instance.new("Frame")
+particlesContainer.Name = "ParticlesContainer"
+particlesContainer.Size = UDim2.new(1, 0, 1, -180)
+particlesContainer.Position = UDim2.new(0, 0, 0, 180)
+particlesContainer.BackgroundTransparency = 1
+particlesContainer.ClipsDescendants = true
+particlesContainer.Parent = mainFrame
+
+task.spawn(function()
+    local columns = 50
+    local columnWidth = 300 / columns
+    local activeColumns = {}
+
+    for i = 1, columns do
+        activeColumns[i] = false
     end
-    return nil
-end
 
-local coreCode = FetchCore()
+    while customGui.Parent do
+        task.wait(0.05)
+        
+        local activeCount = 0
+        for i = 1, columns do
+            if activeColumns[i] then
+                activeCount = activeCount + 1
+            end
+        end
 
-if not coreCode then
-    warn("RootLib Loader: Core validation failed. Could not fetch core.lua from the provided link.")
-    return
-end
+        local targetMax = math.random(30, 50)
+        if activeCount < targetMax then
+            local availableCols = {}
+            for i = 1, columns do
+                if not activeColumns[i] then
+                    table.insert(availableCols, i)
+                end
+            end
 
-local isSupported = false
-local gameInfo = SupportedGames[currentPlaceId]
+            if #availableCols > 0 then
+                local chosenCol = availableCols[math.random(1, #availableCols)]
+                activeColumns[chosenCol] = true
 
-if gameInfo then
-    if gameInfo.Version == "Any" or gameInfo.Version == currentVersion then
-        isSupported = true
+                local dot = Instance.new("Frame")
+                dot.Name = "DustDot"
+                
+                local dotSize = math.random(2, 5)
+                dot.Size = UDim2.new(0, dotSize, 0, dotSize)
+                
+                local minX = (chosenCol - 1) * columnWidth + 1
+                local maxX = chosenCol * columnWidth - dotSize - 1
+                local randomX = math.random(math.floor(minX), math.floor(math.max(minX, maxX)))
+                
+                dot.Position = UDim2.new(0, randomX, 1, 10)
+                dot.BackgroundColor3 = Color3.fromRGB(255, 255, 255)
+                dot.BackgroundTransparency = math.random(25, 60) / 100
+                dot.BorderSizePixel = 0
+                dot.Parent = particlesContainer
+
+                local dotCorner = Instance.new("UICorner")
+                dotCorner.CornerRadius = UDim.new(1, 0)
+                dotCorner.Parent = dot
+
+                local speed = math.random(25, 65)
+
+                task.spawn(function()
+                    local currentY = 320
+                    while dot.Parent and currentY > -10 do
+                        local dt = task.wait()
+                        currentY = currentY - (speed * dt)
+                        dot.Position = UDim2.new(0, randomX, 0, currentY)
+                    end
+                    
+                    if dot then
+                        dot:Destroy()
+                    end
+                    activeColumns[chosenCol] = false
+                end)
+            end
+        end
     end
-end
+end)
 
-if isSupported then
-    ExecuteCore(coreCode)
-else
-    local screenGui = Instance.new("ScreenGui")
-    screenGui.Name = "ValidationGui"
-    screenGui.ResetOnSpawn = false
-    screenGui.Parent = loaderFolder
-
-    local mainFrame = Instance.new("Frame")
-    mainFrame.Name = "ValidationFrame"
-    mainFrame.Size = UDim2.new(0, 360, 0, 210)
-    mainFrame.Position = UDim2.new(0.5, -180, 0.5, -105)
-    mainFrame.BackgroundColor3 = Color3.fromRGB(0, 0, 0)
-    mainFrame.BorderSizePixel = 0
-    mainFrame.Parent = screenGui
-
-    local corner = Instance.new("UICorner")
-    corner.CornerRadius = UDim.new(0, 12)
-    corner.Parent = mainFrame
-
-    local mainStroke = Instance.new("UIStroke")
-    mainStroke.Color = Color3.fromRGB(35, 35, 35)
-    mainStroke.Thickness = 1.2
-    mainStroke.Parent = mainFrame
-
-    local title = Instance.new("TextLabel")
-    title.Name = "Title"
-    title.Size = UDim2.new(1, 0, 0, 40)
-    title.BackgroundTransparency = 1
-    title.Text = "Validation"
-    title.TextColor3 = Color3.fromRGB(255, 255, 255)
-    title.Font = Enum.Font.GothamBold
-    title.TextSize = 16
-    title.Parent = mainFrame
-
-    local separator = Instance.new("Frame")
-    separator.Name = "Separator"
-    separator.Size = UDim2.new(1, 0, 0, 1)
-    separator.Position = UDim2.new(0, 0, 0, 40)
-    separator.BackgroundColor3 = Color3.fromRGB(35, 35, 35)
-    separator.BorderSizePixel = 0
-    separator.Parent = mainFrame
-
-    local desc = Instance.new("TextLabel")
-    desc.Name = "Description"
-    desc.Size = UDim2.new(1, -40, 0, 80)
-    desc.Position = UDim2.new(0, 20, 0, 55)
-    desc.BackgroundTransparency = 1
-    desc.Text = "Compatibility Warning:\nThis game is not found in the supported list or your game version (" .. tostring(currentVersion) .. ") is incorrect.\n\nDo you still want to force inject the core script?"
-    desc.TextColor3 = Color3.fromRGB(180, 180, 180)
-    desc.Font = Enum.Font.Gotham
-    desc.TextSize = 13
-    desc.TextWrapped = true
-    desc.TextXAlignment = Enum.TextXAlignment.Center
-    desc.Parent = mainFrame
-
-    local btnContainer = Instance.new("Frame")
-    btnContainer.Name = "Buttons"
-    btnContainer.Size = UDim2.new(1, -40, 0, 40)
-    btnContainer.Position = UDim2.new(0, 20, 1, -55)
-    btnContainer.BackgroundTransparency = 1
-    btnContainer.Parent = mainFrame
-
-    local cancelBtn = Instance.new("TextButton")
-    cancelBtn.Name = "CancelBtn"
-    cancelBtn.Size = UDim2.new(0.48, 0, 1, 0)
-    cancelBtn.BackgroundColor3 = Color3.fromRGB(15, 15, 15)
-    cancelBtn.Text = "Cancel"
-    cancelBtn.TextColor3 = Color3.fromRGB(200, 200, 200)
-    cancelBtn.Font = Enum.Font.GothamSemibold
-    cancelBtn.TextSize = 13
-    cancelBtn.AutoButtonColor = true
-    cancelBtn.Parent = btnContainer
+-- ТАЙМЕР НА 5 СЕКУНД И ЗАГРУЗКА ЯДРА С GITHUB
+task.spawn(function()
+    task.wait(5) -- Окно висит ровно 5 секунд
     
-    local cancelCorner = Instance.new("UICorner")
-    cancelCorner.CornerRadius = UDim.new(0, 6)
-    cancelCorner.Parent = cancelBtn
+    -- Плавное удаление окна загрузки
+    local tweenService = game:GetService("TweenService")
+    local fadeInfo = TweenInfo.new(0.5, Enum.EasingStyle.Quad, Enum.EasingDirection.Out)
     
-    local cancelStroke = Instance.new("UIStroke")
-    cancelStroke.Color = Color3.fromRGB(50, 50, 50)
-    cancelStroke.Parent = cancelBtn
-
-    local okayBtn = Instance.new("TextButton")
-    okayBtn.Name = "OkayBtn"
-    okayBtn.Size = UDim2.new(0.48, 0, 1, 0)
-    okayBtn.Position = UDim2.new(0.52, 0, 0, 0)
-    okayBtn.BackgroundColor3 = Color3.fromRGB(255, 255, 255)
-    okayBtn.Text = "Okay"
-    okayBtn.TextColor3 = Color3.fromRGB(0, 0, 0)
-    okayBtn.Font = Enum.Font.GothamSemibold
-    okayBtn.TextSize = 13
-    okayBtn.AutoButtonColor = true
-    okayBtn.Parent = btnContainer
-    
-    local okayCorner = Instance.new("UICorner")
-    okayCorner.CornerRadius = UDim.new(0, 6)
-    okayCorner.Parent = okayBtn
-
-   cancelBtn.MouseButton1Click:Connect(function()
-        mainFrame.Visible = false
-        warn("RootLib Loader: Injection cancelled by user.")
+    pcall(function()
+        for _, desc in ipairs(mainFrame:GetDescendants()) do
+            if desc:IsA("GuiObject") then
+                tweenService:Create(desc, fadeInfo, {BackgroundTransparency = 1}):Play()
+            elseif desc:IsA("TextLabel") or desc:IsA("TextBox") then
+                tweenService:Create(desc, fadeInfo, {TextTransparency = 1}):Play()
+            elseif desc:IsA("ImageLabel") then
+                tweenService:Create(desc, fadeInfo, {ImageTransparency = 1}):Play()
+            end
+        end
+        tweenService:Create(stroke, fadeInfo, {Transparency = 1}):Play()
     end)
+    
+    task.wait(0.5)
+    customGui:Destroy()
 
-    okayBtn.MouseButton1Click:Connect(function()
-        mainFrame.Visible = false
-        print("RootLib Loader: Bypassing validation. Executing core...")
-        ExecuteCore(coreCode)
+    -- Загрузка ядра (core.lua) по ссылке с GitHub
+    local coreUrl = "https://raw.githubusercontent.com/yamdeniska1-a11y/RootLib/refs/heads/main/core/core.lua"
+    local success, err = pcall(function()
+        loadstring(game:HttpGet(coreUrl))()
     end)
-end
+    
+    if not success then
+        warn("RootLib Core load error: " .. tostring(err))
+    end
+end)
