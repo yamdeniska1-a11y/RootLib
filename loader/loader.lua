@@ -24,7 +24,6 @@ customGui.Name = "GameLoaderMenu"
 customGui.IgnoreGuiInset = true
 customGui.Parent = loaderFolder
 
--- Основной фрейм 300x500 по центру
 local mainFrame = Instance.new("Frame")
 mainFrame.Name = "MainFrame"
 mainFrame.Size = UDim2.new(0, 300, 0, 500)
@@ -43,7 +42,6 @@ stroke.Color = Color3.fromRGB(30, 30, 30)
 stroke.Thickness = 0.6
 stroke.Parent = mainFrame
 
--- Контейнер для шапки
 local imageContainer = Instance.new("Frame")
 imageContainer.Name = "ImageContainer"
 imageContainer.Size = UDim2.new(1, 0, 0, 180)
@@ -68,7 +66,6 @@ local imgCorner = Instance.new("UICorner")
 imgCorner.CornerRadius = UDim.new(0, 10)
 imgCorner.Parent = iconImage
 
--- Черный плавный градиент на стыке
 local shadowFade = Instance.new("Frame")
 shadowFade.Name = "JointShadow"
 shadowFade.Size = UDim2.new(1, 0, 0, 45)
@@ -86,7 +83,6 @@ gradient.Transparency = NumberSequence.new({
 gradient.Rotation = 90
 gradient.Parent = shadowFade
 
--- Загрузка картинки с GitHub
 task.spawn(function()
     local success, res = pcall(function()
         local imgUrl = "https://raw.githubusercontent.com/yamdeniska1-a11y/RootLib/refs/heads/main/icon/game/infectedlands.png"
@@ -104,7 +100,6 @@ task.spawn(function()
     end
 end)
 
--- КОНТЕЙНЕР ДЛЯ ЛЕТЯЩИХ ТОЧЕК
 local particlesContainer = Instance.new("Frame")
 particlesContainer.Name = "ParticlesContainer"
 particlesContainer.Size = UDim2.new(1, 0, 1, -180)
@@ -185,11 +180,9 @@ task.spawn(function()
     end
 end)
 
--- ТАЙМЕР НА 5 СЕКУНД И ЗАГРУЗКА ЯДРА С GITHUB
 task.spawn(function()
-    task.wait(5) -- Окно висит ровно 5 секунд
+    task.wait(5)
     
-    -- Плавное удаление окна загрузки
     local tweenService = game:GetService("TweenService")
     local fadeInfo = TweenInfo.new(0.5, Enum.EasingStyle.Quad, Enum.EasingDirection.Out)
     
@@ -209,13 +202,12 @@ task.spawn(function()
     task.wait(0.5)
     customGui:Destroy()
 
-    -- Загрузка ядра (core.lua) по ссылке с GitHub
     local coreUrl = "https://raw.githubusercontent.com/yamdeniska1-a11y/RootLib/refs/heads/main/core/core.lua"
-    local success, err = pcall(function()
-        loadstring(game:HttpGet(coreUrl))()
+    local success, RootLib = pcall(function()
+        return loadstring(game:HttpGet(coreUrl))()
     end)
     
     if not success then
-        warn("RootLib Core load error: " .. tostring(err))
+        warn("RootLib Core load error: " .. tostring(RootLib))
     end
 end)
