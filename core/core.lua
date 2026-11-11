@@ -1,5 +1,6 @@
 local StarterGui = game:GetService("StarterGui")
 local CoreGui = game:GetService("CoreGui")
+local TweenService = game:GetService("TweenService")
 local UserInputService = game:GetService("UserInputService")
 
 local CLI_KEY = "ZX94-KM28-PL19-QW73"
@@ -12,6 +13,9 @@ coreFolder.Name = "core"
 
 local oldCLI = coreFolder:FindFirstChild("commands-1")
 if oldCLI then oldCLI:Destroy() end
+
+local oldNotif = coreFolder:FindFirstChild("custom-notif")
+if oldNotif then oldNotif:Destroy() end
 
 local localScript = coreFolder:FindFirstChild("CoreScript") or Instance.new("LocalScript", coreFolder)
 localScript.Name = "CoreScript"
@@ -30,11 +34,66 @@ localScript.Source = [[
     return envProtected
 ]]
 
-StarterGui:SetCore("SendNotification", {
-    Title = "RootLib System",
-    Text = "Ядро успешно загружено!",
-    Duration = 5
-})
+local notifGui = Instance.new("ScreenGui")
+notifGui.Name = "custom-notif"
+notifGui.ResetOnSpawn = false
+notifGui.IgnoreGuiInset = true
+notifGui.Parent = coreFolder
+
+local notifFrame = Instance.new("Frame")
+notifFrame.Name = "Notification"
+notifFrame.Size = UDim2.new(0, 280, 0, 70)
+notifFrame.Position = UDim2.new(1, 300, 1, -90)
+notifFrame.BackgroundColor3 = Color3.fromRGB(0, 0, 0)
+notifFrame.BorderSizePixel = 0
+notifFrame.Parent = notifGui
+
+local notifCorner = Instance.new("UICorner")
+notifCorner.CornerRadius = UDim.new(0, 6)
+notifCorner.Parent = notifFrame
+
+local notifStroke = Instance.new("UIStroke")
+notifStroke.Color = Color3.fromRGB(40, 40, 40)
+notifStroke.Thickness = 0.6
+notifStroke.Parent = notifFrame
+
+local titleLabel = Instance.new("TextLabel")
+titleLabel.Size = UDim2.new(1, -20, 0, 24)
+titleLabel.Position = UDim2.new(0, 12, 0, 10)
+titleLabel.BackgroundTransparency = 1
+titleLabel.Text = "RootLib System"
+titleLabel.TextColor3 = Color3.fromRGB(255, 255, 255)
+titleLabel.TextSize = 14
+titleLabel.FontFace = Font.new("rbxasset://fonts/families/Cartoon.json")
+titleLabel.TextXAlignment = Enum.TextXAlignment.Left
+titleLabel.Parent = notifFrame
+
+local descLabel = Instance.new("TextLabel")
+descLabel.Size = UDim2.new(1, -20, 0, 20)
+descLabel.Position = UDim2.new(0, 12, 0, 36)
+descLabel.BackgroundTransparency = 1
+descLabel.Text = "Core successfully loaded!"
+descLabel.TextColor3 = Color3.fromRGB(140, 140, 140)
+descLabel.TextSize = 12
+descLabel.FontFace = Font.new("rbxasset://fonts/families/Cartoon.json")
+descLabel.TextXAlignment = Enum.TextXAlignment.Left
+descLabel.Parent = notifFrame
+
+task.spawn(function()
+    notifFrame.Position = UDim2.new(1, 300, 1, -90)
+    local info = TweenInfo.new(0.5, Enum.EasingStyle.Quad, Enum.EasingDirection.Out)
+    
+    local inTween = TweenService:Create(notifFrame, info, {Position = UDim2.new(1, -290, 1, -90)})
+    inTween:Play()
+    inTween.Completed:Wait()
+    
+    task.wait(5)
+    
+    local outTween = TweenService:Create(notifFrame, info, {Position = UDim2.new(1, 300, 1, -90)})
+    outTween:Play()
+    outTween.Completed:Wait()
+    notifGui:Destroy()
+end)
 
 local commands1 = Instance.new("ScreenGui")
 commands1.Name = "commands-1"
@@ -129,13 +188,13 @@ commander.FocusLost:Connect(function(enterPressed)
         if userKey == CLI_KEY then
             StarterGui:SetCore("SendNotification", {
                 Title = "Verification Success",
-                Text = "Доступ разрешен!",
+                Text = "Access granted!",
                 Duration = 8
             })
         else
             StarterGui:SetCore("SendNotification", {
                 Title = "Access Denied",
-                Text = "Неверный ключ!",
+                Text = "Invalid key!",
                 Duration = 5
             })
         end
