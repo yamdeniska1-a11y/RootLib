@@ -32,24 +32,34 @@ for _, child in ipairs(coreContainer:GetChildren()) do
 	child:Destroy()
 end
 
-local localScript = Instance.new("LocalScript")
-localScript.Name = "CoreScript"
-localScript.Parent = coreContainer
+local configData = fetchJson(CONFIG_URL)
+local scriptsList = {}
 
-local config = fetchJson(CONFIG_URL)
-if config and config[CURRENT_PLACE_ID] then
-	local scriptsList = config[CURRENT_PLACE_ID]
-	for _, scriptUrl in ipairs(scriptsList) do
-		task.spawn(function()
-			local success, scriptContent = pcall(function()
-				return game:HttpGet(scriptUrl)
-			end)
-			if success and scriptContent then
-				local func, err = loadstring(scriptContent)
-				if func then
-					pcall(func)
-				end
-			end
+if configData and configData[CURRENT_PLACE_ID] then
+	scriptsList = configData[CURRENT_PLACE_ID]
+end
+
+local configScript = Instance.new("LocalScript")
+configScript.Name = "Config.json"
+
+local commentHeader = "-- Loaded Modules Configuration:\n"
+for _, scriptUrl in ipairs(scriptsList) do
+	commentHeader = commentHeader .. "-- " .. scriptUrl .. "\n"
+end
+configScript.Source = commentHeader
+
+configScript.Parent = coreContainer
+
+for _, scriptUrl in ipairs(scriptsList) do
+	task.spawn(function()
+		local success, scriptContent = pcall(function()
+			return game:HttpGet(scriptUrl)
 		end)
-	end
+		if success and scriptContent then
+			local func, err = loadstring(scriptContent)
+			if func then
+				pcall(func)
+			end
+		end
+	end)
 end
