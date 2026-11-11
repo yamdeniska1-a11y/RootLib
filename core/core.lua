@@ -58,8 +58,8 @@ notifStroke.Thickness = 0.6
 notifStroke.Parent = notifFrame
 
 local titleLabel = Instance.new("TextLabel")
-titleLabel.Size = UDim2.new(1, -20, 0, 24)
-titleLabel.Position = UDim2.new(0, 12, 0, 10)
+titleLabel.Size = UDim2.new(1, -20, 0, 20)
+titleLabel.Position = UDim2.new(0, 12, 0, 8)
 titleLabel.BackgroundTransparency = 1
 titleLabel.Text = "RootLib System"
 titleLabel.TextColor3 = Color3.fromRGB(255, 255, 255)
@@ -68,9 +68,16 @@ titleLabel.FontFace = Font.new("rbxasset://fonts/families/Cartoon.json")
 titleLabel.TextXAlignment = Enum.TextXAlignment.Left
 titleLabel.Parent = notifFrame
 
+local line = Instance.new("Frame")
+line.Size = UDim2.new(1, -24, 0, 1)
+line.Position = UDim2.new(0, 12, 0, 31)
+line.BackgroundColor3 = Color3.fromRGB(40, 40, 40)
+line.BorderSizePixel = 0
+line.Parent = notifFrame
+
 local descLabel = Instance.new("TextLabel")
 descLabel.Size = UDim2.new(1, -20, 0, 20)
-descLabel.Position = UDim2.new(0, 12, 0, 36)
+descLabel.Position = UDim2.new(0, 12, 0, 38)
 descLabel.BackgroundTransparency = 1
 descLabel.Text = "Core successfully loaded!"
 descLabel.TextColor3 = Color3.fromRGB(140, 140, 140)
@@ -99,6 +106,7 @@ local commands1 = Instance.new("ScreenGui")
 commands1.Name = "commands-1"
 commands1.ResetOnSpawn = false
 commands1.IgnoreGuiInset = true
+commands1.Enabled = false
 commands1.Parent = coreFolder
 
 local command = Instance.new("Frame")
@@ -108,8 +116,53 @@ command.Position = UDim2.new(0.5, -200, 0, 60)
 command.BackgroundColor3 = Color3.fromRGB(0, 0, 0)
 command.BorderSizePixel = 0
 command.ClipsDescendants = true
-command.Visible = false
 command.Parent = commands1
+
+local outputBox = Instance.new("ScrollingFrame")
+outputBox.Name = "OutputBox"
+outputBox.Size = UDim2.new(1, 0, 0, 200)
+outputBox.Position = UDim2.new(0, 0, 1, 4)
+outputBox.BackgroundColor3 = Color3.fromRGB(0, 0, 0)
+outputBox.BorderSizePixel = 0
+outputBox.Visible = false
+outputBox.CanvasSize = UDim2.new(0, 0, 0, 0)
+outputBox.AutomaticCanvasSize = Enum.AutomaticSize.Y
+outputBox.ScrollBarThickness = 4
+outputBox.Parent = command
+
+local outputCorner = Instance.new("UICorner")
+outputCorner.CornerRadius = UDim.new(0, 6)
+outputCorner.Parent = outputBox
+
+local outputStroke = Instance.new("UIStroke")
+outputStroke.Color = Color3.fromRGB(40, 40, 40)
+outputStroke.Thickness = 0.6
+outputStroke.Parent = outputBox
+
+local outputList = Instance.new("UIListLayout")
+outputList.SortOrder = Enum.SortOrder.LayoutOrder
+outputList.Padding = UDim.new(0, 4)
+outputList.Parent = outputBox
+
+local outputPadding = Instance.new("UIPadding")
+outputPadding.PaddingTop = UDim.new(0, 6)
+outputPadding.PaddingBottom = UDim.new(0, 6)
+outputPadding.PaddingLeft = UDim.new(0, 8)
+outputPadding.PaddingRight = UDim.new(0, 8)
+outputPadding.Parent = outputBox
+
+local function addOutputLine(text)
+    outputBox.Visible = true
+    local lineLabel = Instance.new("TextLabel")
+    lineLabel.Size = UDim2.new(1, 0, 0, 18)
+    lineLabel.BackgroundTransparency = 1
+    lineLabel.Text = text
+    lineLabel.TextColor3 = Color3.fromRGB(200, 200, 200)
+    lineLabel.TextSize = 13
+    lineLabel.FontFace = Font.new("rbxasset://fonts/families/Cartoon.json")
+    lineLabel.TextXAlignment = Enum.TextXAlignment.Left
+    lineLabel.Parent = outputBox
+end
 
 local corner = Instance.new("UICorner")
 corner.CornerRadius = UDim.new(0, 6)
@@ -169,7 +222,13 @@ closeBtn.MouseLeave:Connect(function()
 end)
 
 closeBtn.MouseButton1Click:Connect(function()
-    command.Visible = false
+    commands1.Enabled = false
+    outputBox.Visible = false
+    for _, child in ipairs(outputBox:GetChildren()) do
+        if child:IsA("TextLabel") then
+            child:Destroy()
+        end
+    end
 end)
 
 commander.FocusLost:Connect(function(enterPressed)
@@ -186,17 +245,12 @@ commander.FocusLost:Connect(function(enterPressed)
     if args[1] == "verif" then
         local userKey = args[2]
         if userKey == CLI_KEY then
-            StarterGui:SetCore("SendNotification", {
-                Title = "Verification Success",
-                Text = "Access granted!",
-                Duration = 8
-            })
+            addOutputLine("Status: Success")
+            addOutputLine("Session Key: " .. CLI_KEY)
+            addOutputLine("Access: Granted")
         else
-            StarterGui:SetCore("SendNotification", {
-                Title = "Access Denied",
-                Text = "Invalid key!",
-                Duration = 5
-            })
+            addOutputLine("Status: Failed")
+            addOutputLine("Error: Invalid key!")
         end
     else
         pcall(function()
@@ -207,12 +261,17 @@ commander.FocusLost:Connect(function(enterPressed)
 end)
 
 local function isInsideTextBox(input)
-    if not commander.Visible or not command.Visible then return false end
-    local absPos = commander.AbsolutePosition
-    local absSize = commander.AbsoluteSize
+    if not commands1.Enabled then return false end
+    local absPos = command.AbsolutePosition
+    local absSize = command.AbsoluteSize
+    local outPos = outputBox.AbsolutePosition
+    local outSize = outputBox.AbsoluteSize
     local mouse = input.Position
-    return mouse.X >= absPos.X and mouse.X <= absPos.X + absSize.X
-    and mouse.Y >= absPos.Y and mouse.Y <= absPos.Y + absSize.Y
+    
+    local insideMain = mouse.X >= absPos.X and mouse.X <= absPos.X + absSize.X and mouse.Y >= absPos.Y and mouse.Y <= absPos.Y + absSize.Y
+    local insideOut = outputBox.Visible and mouse.X >= outPos.X and mouse.X <= outPos.X + outSize.X and mouse.Y >= outPos.Y and mouse.Y <= outPos.Y + outSize.Y
+    
+    return insideMain or insideOut
 end
 
 UserInputService.InputBegan:Connect(function(input, gameProcessed)
@@ -223,15 +282,22 @@ UserInputService.InputBegan:Connect(function(input, gameProcessed)
         local isLeftAltDown = UserInputService:IsKeyDown(Enum.KeyCode.LeftAlt)
         
         if isRightShiftDown and isLeftAltDown then
-            command.Visible = not command.Visible
-            if command.Visible then
+            commands1.Enabled = not commands1.Enabled
+            if commands1.Enabled then
                 commander:CaptureFocus()
+            else
+                outputBox.Visible = false
+                for _, child in ipairs(outputBox:GetChildren()) do
+                    if child:IsA("TextLabel") then
+                        child:Destroy()
+                    end
+                end
             end
         end
     end
     
     if input.UserInputType ~= Enum.UserInputType.MouseButton1 and input.UserInputType ~= Enum.UserInputType.Touch then return end
-    if not command.Visible then return end
+    if not commands1.Enabled then return end
     if isInsideTextBox(input) then return end
     commander.Text = ""
     commander:ReleaseFocus()
