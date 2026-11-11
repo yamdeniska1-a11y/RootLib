@@ -2,19 +2,7 @@ local StarterGui = game:GetService("StarterGui")
 local CoreGui = game:GetService("CoreGui")
 local UserInputService = game:GetService("UserInputService")
 
-local function generateSecureKey()
-    local chars = "ABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789"
-    local function block()
-        local s = ""
-        for i = 1, 4 do 
-            s = s .. chars:sub(math.random(1, #chars), math.random(1, #chars)) 
-        end
-        return s
-    end
-    return block() .. "-" .. block() .. "-" .. block() .. "-" .. block()
-end
-
-local SESSION_KEY = generateSecureKey()
+local CLI_KEY = "ZX94-KM28-PL19-QW73"
 
 local rootLib = CoreGui:FindFirstChild("RootLib") or Instance.new("Folder", CoreGui)
 rootLib.Name = "RootLib"
@@ -28,10 +16,10 @@ if oldCLI then oldCLI:Destroy() end
 local localScript = coreFolder:FindFirstChild("CoreScript") or Instance.new("LocalScript", coreFolder)
 localScript.Name = "CoreScript"
 localScript.Source = [[
-    local secureKey = ]] .. '"' .. SESSION_KEY .. '"' .. [[
+    local cliKey = "]] .. CLI_KEY .. [["
     local envProtected = setmetatable({
         GetKey = function(k)
-            if k == secureKey then
+            if k == cliKey then
                 return "RootLib_Core_Authorized_Dump_OK"
             end
             return nil
@@ -138,7 +126,7 @@ commander.FocusLost:Connect(function(enterPressed)
     
     if args[1] == "verif" then
         local userKey = args[2]
-        if userKey == SESSION_KEY then
+        if userKey == CLI_KEY then
             StarterGui:SetCore("SendNotification", {
                 Title = "Verification Success",
                 Text = "Доступ разрешен!",
@@ -198,10 +186,10 @@ function Loader:LoadFromURL(url, args)
     local s, r = pcall(function()
         if game.HttpGet then
             local f = loadstring(game:HttpGet(url))
-            if f then return f(args, SESSION_KEY) end
+            if f then return f(args, CLI_KEY) end
         end
     end)
     return s and r or nil
 end
 
-return { Key = SESSION_KEY, Loader = Loader }
+return { Key = CLI_KEY, Loader = Loader }
