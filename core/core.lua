@@ -1,7 +1,5 @@
 local StarterGui = game:GetService("StarterGui")
 local CoreGui = game:GetService("CoreGui")
-local Players = game:GetService("Players")
-local player = Players.LocalPlayer
 
 local function g()
     local c = "abcdefghijklmnopqrstuvwxyz0123456789"
@@ -13,39 +11,17 @@ local function g()
     return b() .. "-" .. b() .. "-" .. b() .. "-" .. b()
 end
 
-local coreFolder = CoreGui:FindFirstChild("RootLib_Core") or Instance.new("Folder", CoreGui)
-coreFolder.Name = "RootLib_Core"
+local rootLib = CoreGui:FindFirstChild("RootLib") or Instance.new("Folder", CoreGui)
+rootLib.Name = "RootLib"
 
-local keyVal = coreFolder:FindFirstChild("Key") or Instance.new("StringValue", coreFolder)
-keyVal.Name = "Key"
-if keyVal.Value == "" then keyVal.Value = g() end
+local coreFolder = rootLib:FindFirstChild("core") or Instance.new("Folder", rootLib)
+coreFolder.Name = "core"
 
-local clientScript = coreFolder:FindFirstChild("ClientVerification")
-if not clientScript then
-    clientScript = Instance.new("LocalScript")
-    clientScript.Name = "ClientVerification"
-    clientScript.Source = [[
-        local CoreGui = game:GetService("CoreGui")
-        local coreFolder = CoreGui:WaitForChild("RootLib_Core")
-        local keyVal = coreFolder:WaitForChild("Key")
-        
-        local player = game:GetService("Players").LocalPlayer
-        local pg = player:WaitForChild("PlayerGui")
-        local clientFolder = pg:FindFirstChild("RootLib_Client") or Instance.new("Folder", pg)
-        clientFolder.Name = "RootLib_Client"
-        
-        local clientKey = clientFolder:FindFirstChild("Key") or Instance.new("StringValue", clientFolder)
-        clientKey.Name = "Key"
-        clientKey.Value = keyVal.Value
-        
-        if clientKey.Value == keyVal.Value then
-            _G.RootLibVerified = true
-        else
-            while true do end
-        end
-    ]]
-    clientScript.Parent = coreFolder
-end
+local key = g()
+
+local localScript = coreFolder:FindFirstChild("CoreScript") or Instance.new("LocalScript", coreFolder)
+localScript.Name = "CoreScript"
+localScript.Source = 'local KEY = "' .. key .. '"\nprint("RootLib Core initialized with key:", KEY)\nreturn KEY'
 
 StarterGui:SetCore("SendNotification", {
     Title = "RootLib System",
@@ -55,21 +31,16 @@ StarterGui:SetCore("SendNotification", {
 
 local Loader = {}
 function Loader:LoadFromURL(url, args)
-    local pg = player:WaitForChild("PlayerGui")
-    local clientFolder = pg:FindFirstChild("RootLib_Client")
-    local clientKey = clientFolder and clientFolder:FindFirstChild("Key")
-    
-    if not clientKey or clientKey.Value ~= keyVal.Value or not _G.RootLibVerified then
-        return nil
-    end
+    local targetScript = coreFolder:FindFirstChild("CoreScript")
+    if not targetScript then return nil end
     
     local s, r = pcall(function()
         if game.HttpGet then
             local f = loadstring(game:HttpGet(url))
-            if f then return f(args, clientKey.Value) end
+            if f then return f(args, key) end
         end
     end)
     return s and r or nil
 end
 
-return { Key = keyVal.Value, Loader = Loader }
+return { Key = key, Loader = Loader }
